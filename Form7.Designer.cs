@@ -31,13 +31,14 @@
             System.Windows.Forms.Button button1;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form7));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
-            this.label2 = new System.Windows.Forms.Label();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.checkBox2 = new System.Windows.Forms.CheckBox();
             this.numericUpDown2 = new System.Windows.Forms.NumericUpDown();
@@ -66,7 +67,6 @@
             this.button2 = new System.Windows.Forms.Button();
             this.groupBox15 = new System.Windows.Forms.GroupBox();
             this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.numericUpDown7 = new System.Windows.Forms.NumericUpDown();
             button1 = new System.Windows.Forms.Button();
@@ -98,9 +98,9 @@
             // 
             button1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
             button1.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            button1.Location = new System.Drawing.Point(12, 521);
+            button1.Location = new System.Drawing.Point(5, 521);
             button1.Name = "button1";
-            button1.Size = new System.Drawing.Size(1083, 77);
+            button1.Size = new System.Drawing.Size(1029, 77);
             button1.TabIndex = 11;
             button1.Text = "保　存";
             button1.UseVisualStyleBackColor = false;
@@ -112,18 +112,40 @@
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Font = new System.Drawing.Font("MS UI Gothic", 19.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox1.Location = new System.Drawing.Point(12, 175);
+            this.groupBox1.Location = new System.Drawing.Point(5, 175);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(1083, 78);
+            this.groupBox1.Size = new System.Drawing.Size(1029, 78);
             this.groupBox1.TabIndex = 7;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "肉厚範囲";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.label4.Location = new System.Drawing.Point(494, 25);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(42, 43);
+            this.label4.TabIndex = 1;
+            this.label4.Text = "-";
+            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.label2.Location = new System.Drawing.Point(594, 25);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(128, 43);
+            this.label2.TabIndex = 0;
+            this.label2.Text = "label2";
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.label1.Location = new System.Drawing.Point(332, 25);
+            this.label1.Location = new System.Drawing.Point(312, 25);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(128, 43);
             this.label1.TabIndex = 0;
@@ -136,7 +158,7 @@
             this.groupBox3.Controls.Add(this.numericUpDown1);
             this.groupBox3.Controls.Add(this.groupBox4);
             this.groupBox3.Font = new System.Drawing.Font("MS UI Gothic", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox3.Location = new System.Drawing.Point(12, 336);
+            this.groupBox3.Location = new System.Drawing.Point(6, 336);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Size = new System.Drawing.Size(168, 178);
             this.groupBox3.TabIndex = 9;
@@ -190,24 +212,13 @@
             this.comboBox1.TabIndex = 4;
             this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.label2.Location = new System.Drawing.Point(613, 25);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(128, 43);
-            this.label2.TabIndex = 0;
-            this.label2.Text = "label2";
-            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
             // groupBox5
             // 
             this.groupBox5.Controls.Add(this.checkBox2);
             this.groupBox5.Controls.Add(this.numericUpDown2);
             this.groupBox5.Controls.Add(this.groupBox6);
             this.groupBox5.Font = new System.Drawing.Font("MS UI Gothic", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox5.Location = new System.Drawing.Point(194, 336);
+            this.groupBox5.Location = new System.Drawing.Point(178, 336);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(168, 178);
             this.groupBox5.TabIndex = 11;
@@ -267,7 +278,7 @@
             this.groupBox7.Controls.Add(this.numericUpDown3);
             this.groupBox7.Controls.Add(this.groupBox8);
             this.groupBox7.Font = new System.Drawing.Font("MS UI Gothic", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox7.Location = new System.Drawing.Point(376, 336);
+            this.groupBox7.Location = new System.Drawing.Point(350, 336);
             this.groupBox7.Name = "groupBox7";
             this.groupBox7.Size = new System.Drawing.Size(168, 178);
             this.groupBox7.TabIndex = 11;
@@ -327,7 +338,7 @@
             this.groupBox9.Controls.Add(this.numericUpDown4);
             this.groupBox9.Controls.Add(this.groupBox10);
             this.groupBox9.Font = new System.Drawing.Font("MS UI Gothic", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox9.Location = new System.Drawing.Point(559, 336);
+            this.groupBox9.Location = new System.Drawing.Point(522, 336);
             this.groupBox9.Name = "groupBox9";
             this.groupBox9.Size = new System.Drawing.Size(168, 178);
             this.groupBox9.TabIndex = 11;
@@ -387,7 +398,7 @@
             this.groupBox11.Controls.Add(this.numericUpDown5);
             this.groupBox11.Controls.Add(this.groupBox12);
             this.groupBox11.Font = new System.Drawing.Font("MS UI Gothic", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox11.Location = new System.Drawing.Point(743, 336);
+            this.groupBox11.Location = new System.Drawing.Point(694, 336);
             this.groupBox11.Name = "groupBox11";
             this.groupBox11.Size = new System.Drawing.Size(168, 178);
             this.groupBox11.TabIndex = 11;
@@ -447,7 +458,7 @@
             this.groupBox13.Controls.Add(this.numericUpDown6);
             this.groupBox13.Controls.Add(this.groupBox14);
             this.groupBox13.Font = new System.Drawing.Font("MS UI Gothic", 13.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox13.Location = new System.Drawing.Point(927, 336);
+            this.groupBox13.Location = new System.Drawing.Point(866, 336);
             this.groupBox13.Name = "groupBox13";
             this.groupBox13.Size = new System.Drawing.Size(168, 178);
             this.groupBox13.TabIndex = 11;
@@ -505,9 +516,9 @@
             // 
             this.button2.BackColor = System.Drawing.Color.Gold;
             this.button2.Font = new System.Drawing.Font("MS UI Gothic", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.button2.Location = new System.Drawing.Point(12, 258);
+            this.button2.Location = new System.Drawing.Point(5, 258);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(1083, 72);
+            this.button2.Size = new System.Drawing.Size(1029, 72);
             this.button2.TabIndex = 12;
             this.button2.Text = "ま　と　め　て　入　力";
             this.button2.UseVisualStyleBackColor = false;
@@ -517,9 +528,9 @@
             // 
             this.groupBox15.Controls.Add(this.label3);
             this.groupBox15.Font = new System.Drawing.Font("MS UI Gothic", 19.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox15.Location = new System.Drawing.Point(14, 3);
+            this.groupBox15.Location = new System.Drawing.Point(7, 3);
             this.groupBox15.Name = "groupBox15";
-            this.groupBox15.Size = new System.Drawing.Size(1083, 78);
+            this.groupBox15.Size = new System.Drawing.Size(1027, 78);
             this.groupBox15.TabIndex = 8;
             this.groupBox15.TabStop = false;
             this.groupBox15.Text = "スリーブ";
@@ -528,31 +539,20 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.label3.Location = new System.Drawing.Point(474, 25);
+            this.label3.Location = new System.Drawing.Point(452, 25);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(128, 43);
             this.label3.TabIndex = 0;
             this.label3.Text = "label3";
             this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Font = new System.Drawing.Font("MS UI Gothic", 25.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.label4.Location = new System.Drawing.Point(515, 25);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(42, 43);
-            this.label4.TabIndex = 1;
-            this.label4.Text = "-";
-            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
             // groupBox2
             // 
             this.groupBox2.Controls.Add(this.numericUpDown7);
             this.groupBox2.Font = new System.Drawing.Font("MS UI Gothic", 19.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.groupBox2.Location = new System.Drawing.Point(12, 87);
+            this.groupBox2.Location = new System.Drawing.Point(5, 87);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(1083, 87);
+            this.groupBox2.Size = new System.Drawing.Size(1029, 87);
             this.groupBox2.TabIndex = 13;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "ショット数";
@@ -560,7 +560,7 @@
             // numericUpDown7
             // 
             this.numericUpDown7.Font = new System.Drawing.Font("MS UI Gothic", 19.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.numericUpDown7.Location = new System.Drawing.Point(452, 28);
+            this.numericUpDown7.Location = new System.Drawing.Point(424, 28);
             this.numericUpDown7.Maximum = new decimal(new int[] {
             99999,
             0,
@@ -575,7 +575,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
-            this.ClientSize = new System.Drawing.Size(1109, 604);
+            this.ClientSize = new System.Drawing.Size(1037, 604);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox15);
             this.Controls.Add(this.button2);

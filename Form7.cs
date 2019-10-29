@@ -21,6 +21,7 @@ namespace PgmDataMonitor
         public Form7()
         {
             InitializeComponent();
+			this.MaximizeBox = false;
         }
 
 		public void SetInfo(string sleeve, string shotCount, string nikuUplimit, string nikuDnlimit, string nikuEdit, string resultCause)

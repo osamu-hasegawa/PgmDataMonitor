@@ -148,6 +148,18 @@
     <Compile Include="FormCalendar.Designer.cs">
       <DependentUpon>FormCalendar.cs</DependentUpon>
     </Compile>
+    <Compile Include="FormConfirmWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormConfirmWindow.Designer.cs">
+      <DependentUpon>FormConfirmWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormSeikeiList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormSeikeiList.Designer.cs">
+      <DependentUpon>FormSeikeiList.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SettingForm.cs">
@@ -179,6 +191,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="FormCalendar.resx">
       <DependentUpon>FormCalendar.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormConfirmWindow.resx">
+      <DependentUpon>FormConfirmWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormSeikeiList.resx">
+      <DependentUpon>FormSeikeiList.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

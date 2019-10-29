@@ -100,7 +100,7 @@ namespace PgmDataMonitor
 
         private void Form2_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Application.Exit();
+			Application.Exit();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -115,5 +115,6 @@ namespace PgmDataMonitor
 			timer1.Enabled = false;
             this.Hide();
         }
+
     }
 }

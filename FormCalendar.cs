@@ -6,11 +6,75 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace PgmDataMonitor
 {
     public partial class FormCalender : Form
     {
+//PCがスリープ状態に入らないようする start
+        #region Win32 API
+        [FlagsAttribute]
+        public enum ExecutionState : uint
+        {
+            // 関数が失敗した時の戻り値
+            Null = 0,
+            // スタンバイを抑止(Vista以降は効かない？)
+            SystemRequired = 1,
+            // 画面OFFを抑止
+            DisplayRequired = 2,
+            // 効果を永続させる。ほかオプションと併用する。
+            Continuous = 0x80000000,
+        }
+
+        [DllImport("user32.dll")]
+        extern static uint SendInput(
+            uint nInputs,   // INPUT 構造体の数(イベント数)
+            INPUT[] pInputs,   // INPUT 構造体
+            int cbSize     // INPUT 構造体のサイズ
+            );
+
+        [StructLayout(LayoutKind.Sequential)]  // アンマネージ DLL 対応用 struct 記述宣言
+        struct INPUT
+        {
+            public int type;  // 0 = INPUT_MOUSE(デフォルト), 1 = INPUT_KEYBOARD
+            public MOUSEINPUT mi;
+            // Note: struct の場合、デフォルト(パラメータなしの)コンストラクタは、
+            //       言語側で定義済みで、フィールドを 0 に初期化する。
+        }
+
+        [StructLayout(LayoutKind.Sequential)]  // アンマネージ DLL 対応用 struct 記述宣言
+        struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public int mouseData;  // amount of wheel movement
+            public int dwFlags;
+            public int time;  // time stamp for the event
+            public IntPtr dwExtraInfo;
+            // Note: struct の場合、デフォルト(パラメータなしの)コンストラクタは、
+            //       言語側で定義済みで、フィールドを 0 に初期化する。
+        }
+
+        // dwFlags
+        const int MOUSEEVENTF_MOVED = 0x0001;
+        const int MOUSEEVENTF_LEFTDOWN = 0x0002;  // 左ボタン Down
+        const int MOUSEEVENTF_LEFTUP = 0x0004;  // 左ボタン Up
+        const int MOUSEEVENTF_RIGHTDOWN = 0x0008;  // 右ボタン Down
+        const int MOUSEEVENTF_RIGHTUP = 0x0010;  // 右ボタン Up
+        const int MOUSEEVENTF_MIDDLEDOWN = 0x0020;  // 中ボタン Down
+        const int MOUSEEVENTF_MIDDLEUP = 0x0040;  // 中ボタン Up
+        const int MOUSEEVENTF_WHEEL = 0x0080;
+        const int MOUSEEVENTF_XDOWN = 0x0100;
+        const int MOUSEEVENTF_XUP = 0x0200;
+        const int MOUSEEVENTF_ABSOLUTE = 0x8000;
+
+        const int screen_length = 0x10000;  // for MOUSEEVENTF_ABSOLUTE
+        [DllImport("kernel32.dll")]
+        static extern ExecutionState SetThreadExecutionState(ExecutionState esFlags);
+        #endregion
+//PCがスリープ状態に入らないようする end
+
         Form1 form1 = null;
         Form3 form3 = null;
         Form4 form4 = null;
@@ -47,18 +111,31 @@ namespace PgmDataMonitor
 			label46.Text = "";
 			label47.Text = "";
 			label48.Text = "";
+			label222.Text = "";
 
 			label50.Text = "0";
 			label51.Text = "0";
 			label52.Text = "0";
 			label53.Text = "0";
 
-            monthCalendar1.Font = new Font("MS UI Gothic", 20, FontStyle.Bold);
+			//OSのバージョン情報を取得する
+			System.OperatingSystem os = System.Environment.OSVersion;
+			//Windows NT系か調べる
+			if(os.Platform == PlatformID.Win32NT)
+			{
+			    //メジャーバージョン番号が6未満がXP以前
+			    if(os.Version.Major < 6)
+			    {
+	                monthCalendar1.Font = new Font("MS UI Gothic", 12, FontStyle.Bold);//XP以前だと設定Fontが反映される
+	            }
+	        }
 
-			this.MaximizeBox = false;
-			this.MinimizeBox = false;
+//			this.MaximizeBox = false;
+//			this.MinimizeBox = false;
+			this.ControlBox = !this.ControlBox;
             
             timer1.Enabled = true;
+            alive_timer.Enabled = true;
         }
 
         public void SetParentForm(Form form, int type)
@@ -98,7 +175,7 @@ namespace PgmDataMonitor
                     if (staDate == "" || endDate == "")
                     {
                         //締めの開始または終了が指定されていない。
-                        label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                        label49.Text = "締め開始/終了が未指定";
                         return;
                     }
 
@@ -112,7 +189,7 @@ namespace PgmDataMonitor
                     if (staDate == "" || endDate == "")
                     {
                         //締めの開始または終了が指定されていない。
-                        label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                        label49.Text = "締め開始/終了が未指定";
                         return;
                     }
 
@@ -126,7 +203,7 @@ namespace PgmDataMonitor
                     if (staDate == "" || endDate == "")
                     {
                         //締めの開始または終了が指定されていない。
-                        label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                        label49.Text = "締め開始/終了が未指定";
                         return;
                     }
 
@@ -140,7 +217,7 @@ namespace PgmDataMonitor
                     if (staDate == "" || endDate == "")
                     {
                         //締めの開始または終了が指定されていない。
-                        label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                        label49.Text = "締め開始/終了が未指定";
                         return;
                     }
 
@@ -185,6 +262,7 @@ namespace PgmDataMonitor
 			label46.Text = "0";
 			label47.Text = "0";
 			label48.Text = "0";
+			label222.Text = "0";
 
 			label50.Text = "0";
 			label51.Text = "0";
@@ -202,23 +280,24 @@ namespace PgmDataMonitor
 			label209.Text = "";
 			label210.Text = "";
 
-			Label [] shotLabel = new Label [] {label70, label71, label72, label73, label74, label75, label76, label77};
-			Label [] seikeiLabel = new Label [] {label78, label79, label80, label81, label82, label83, label84, label85};
-			Label [] goodLabel = new Label [] {label86, label87, label88, label89, label90, label91, label92, label93};
-			Label [] furyouLabel = new Label [] {label94, label95, label96, label97, label98, label99, label100, label101};
-			Label [] nikufuLabel = new Label [] {label102, label103, label104, label105, label106, label107, label108, label109};
-			Label [] kizuLabel = new Label [] {label110, label111, label112, label113, label114, label115, label116, label117};
-			Label [] butsuLabel = new Label [] {label118, label119, label120, label121, label122, label123, label124, label125};
-			Label [] yakeLabel = new Label [] {label126, label127, label128, label129, label130, label131, label132, label133};
-			Label [] hibicrackLabel = new Label [] {label134, label135, label136, label137, label138, label139, label140, label141};
-			Label [] gasukizuLabel = new Label [] {label142, label143, label144, label145, label146, label147, label148, label149};
-			Label [] houshsaLabel = new Label [] {label150, label151, label152, label153, label154, label155, label156, label157};
-			Label [] giratsukiLabel = new Label [] {label158, label159, label160, label161, label162, label163, label164, label165};
-			Label [] hennikuLabel = new Label [] {label166, label167, label168, label169, label170, label171, label172, label173};
-			Label [] yogoreLabel = new Label [] {label174, label175, label176, label177, label178, label179, label180, label181};
-			Label [] hokoriLabel = new Label [] {label182, label183, label184, label185, label186, label187, label188, label189};
-			Label [] keijouseidoLabel = new Label [] {label190, label191, label192, label193, label194, label195, label196, label197};
-			Label [] sonotaLabel = new Label [] {label198, label199, label200, label201, label202, label203, label204, label205};
+			Label [] shotLabel = new Label [] {label70, label71, label72, label73, label74, label75, label76, label77, label225, label226};
+			Label [] seikeiLabel = new Label [] {label78, label79, label80, label81, label82, label83, label84, label85, label227, label228};
+			Label [] goodLabel = new Label [] {label86, label87, label88, label89, label90, label91, label92, label93, label229, label230};
+			Label [] furyouLabel = new Label [] {label94, label95, label96, label97, label98, label99, label100, label101, label231, label232};
+			Label [] nikufuLabel = new Label [] {label102, label103, label104, label105, label106, label107, label108, label109, label233, label234};
+			Label [] kizuLabel = new Label [] {label110, label111, label112, label113, label114, label115, label116, label117, label235, label236};
+			Label [] butsuLabel = new Label [] {label118, label119, label120, label121, label122, label123, label124, label125, label237, label238};
+			Label [] yakeLabel = new Label [] {label126, label127, label128, label129, label130, label131, label132, label133, label239, label240};
+			Label [] hibicrackLabel = new Label [] {label134, label135, label136, label137, label138, label139, label140, label141, label241, label242};
+			Label [] gasukizuLabel = new Label [] {label142, label143, label144, label145, label146, label147, label148, label149, label243, label244};
+			Label [] houshsaLabel = new Label [] {label150, label151, label152, label153, label154, label155, label156, label157, label245, label246};
+			Label [] giratsukiLabel = new Label [] {label158, label159, label160, label161, label162, label163, label164, label165, label247, label248};
+			Label [] hennikuLabel = new Label [] {label166, label167, label168, label169, label170, label171, label172, label173, label249, label250};
+			Label [] yogoreLabel = new Label [] {label174, label175, label176, label177, label178, label179, label180, label181, label251, label252};
+			Label [] hokoriLabel = new Label [] {label182, label183, label184, label185, label186, label187, label188, label189, label253, label254};
+			Label [] keijouseidoLabel = new Label [] {label190, label191, label192, label193, label194, label195, label196, label197, label255, label256};
+			Label [] sonotaLabel = new Label [] {label198, label199, label200, label201, label202, label203, label204, label205, label257, label258};
+			Label [] tachiageLabel = new Label [] {label214, label215, label216, label217, label218, label219, label220, label221, label259, label260};
 
 			Label [] item = new Label [] {label23, label24, label25, label26, label27, label28, label29, label30, label31, label32, label33, label34, label35};
 			Label [] valu = new Label [] {label36, label37, label38, label39, label40, label41, label42, label43, label44, label45, label46, label47, label48};
@@ -243,6 +322,7 @@ namespace PgmDataMonitor
 				hokoriLabel[i].Text = "";
 				keijouseidoLabel[i].Text = "";
 				sonotaLabel[i].Text = "";
+				tachiageLabel[i].Text = "";
 			}
 
             string okngStr = "";
@@ -271,6 +351,7 @@ namespace PgmDataMonitor
 			string hokoriNG = "";
 			string keijoseidoNG = "";
 			string etcNG = "";
+			string tachiageNG = "";
 
             if(formType == 0 || formType == 1)//LS,NQD
 			{
@@ -279,7 +360,7 @@ namespace PgmDataMonitor
 										ref  nikuatsuNG, ref  kizuNG, ref  butsuNG, ref  yakeNG, 
 										ref  hibicrackNG, ref  gasukizuNG, ref  houshakizuNG, 
 										ref  giratsukikumoriNG, ref  hennikumendareNG, ref  yogoreNG, 
-										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG);
+										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG, ref tachiageNG);
 
 				form1.GetDisplayData(ref gouki, ref seihin, ref upper, ref lower, ref operatorName);
 				string shotword = string.Format("限界ショット数 ( {0} : 赤 / {1} : 黄 ) : ", (Form1.SETDATA.maxShotCount - 20), (Form1.SETDATA.maxShotCount - 40));
@@ -293,7 +374,7 @@ namespace PgmDataMonitor
 										ref  nikuatsuNG, ref  kizuNG, ref  butsuNG, ref  yakeNG, 
 										ref  hibicrackNG, ref  gasukizuNG, ref  houshakizuNG, 
 										ref  giratsukikumoriNG, ref  hennikumendareNG, ref  yogoreNG, 
-										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG);
+										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG, ref tachiageNG);
 
 				form3.GetDisplayData(ref gouki, ref seihin, ref upper, ref lower, ref operatorName);
 				string shotword = string.Format("限界ショット数 ( {0} : 赤 / {1} : 黄 ) : ", (Form3.SETDATA.maxShotCount - 20), (Form3.SETDATA.maxShotCount - 40));
@@ -307,7 +388,7 @@ namespace PgmDataMonitor
 										ref  nikuatsuNG, ref  kizuNG, ref  butsuNG, ref  yakeNG, 
 										ref  hibicrackNG, ref  gasukizuNG, ref  houshakizuNG, 
 										ref  giratsukikumoriNG, ref  hennikumendareNG, ref  yogoreNG, 
-										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG);
+										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG, ref tachiageNG);
 
 				form4.GetDisplayData(ref gouki, ref seihin, ref upper, ref lower, ref operatorName);
 				string shotword = string.Format("限界ショット数 ( {0} : 赤 / {1} : 黄 ) : ", (Form4.SETDATA.maxShotCount - 20), (Form4.SETDATA.maxShotCount - 40));
@@ -321,13 +402,19 @@ namespace PgmDataMonitor
 										ref  nikuatsuNG, ref  kizuNG, ref  butsuNG, ref  yakeNG, 
 										ref  hibicrackNG, ref  gasukizuNG, ref  houshakizuNG, 
 										ref  giratsukikumoriNG, ref  hennikumendareNG, ref  yogoreNG, 
-										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG);
+										ref  hokoriNG, ref  keijoseidoNG, ref  etcNG, ref tachiageNG);
 
 				form6.GetDisplayData(ref gouki, ref seihin, ref upper, ref lower, ref operatorName);
 				string shotword = string.Format("限界ショット数 ( {0} : 赤 / {1} : 黄 ) : ", (Form6.SETDATA.maxShotCount - 20), (Form6.SETDATA.maxShotCount - 40));
                 label17.Text = shotword + Form6.SETDATA.maxShotCount;
             	maxShotCount = Form6.SETDATA.maxShotCount;
             }
+
+			for(int i = 0; i < item.Length; i++)
+			{
+				item[i].ForeColor = Color.Black;
+				valu[i].ForeColor = Color.Black;
+			}
 
             string[] line = okngStr.Split(',');
 
@@ -338,19 +425,6 @@ namespace PgmDataMonitor
 			label20.ForeColor = Color.Blue;
             int okCount = int.Parse(line[0]);
             int ngCount = int.Parse(line[1]);
-
-			double oknum = (double)okCount;
-			double ngnum = (double)ngCount;
-            double total = (double)(oknum + ngnum);
-            double budomari = (double)(oknum / total * 100);
-            label20.Text = budomari.ToString("F1") + "％";
-			label208.Text = label22.Text = total.ToString();
-
-			for(int i = 0; i < item.Length; i++)
-			{
-				item[i].ForeColor = Color.Black;
-				valu[i].ForeColor = Color.Black;
-			}
 
 			if(ngCount > 0)
 			{
@@ -386,16 +460,17 @@ namespace PgmDataMonitor
 			}
 
 
-			Label [] label = new Label[]{label12, label11, label10, label9, label16, label15, label14, label13};
+			Label [] label = new Label[]{label12, label11, label10, label9, label16, label15, label14, label13, label223, label224};
 			for(int i = 0; i < label.Length; i++)
 			{
 				label[i].Text = "";
 				label[i].BackColor = Color.White;
 			}
 
+			string[] sleeveline;
 			if(sleeveInfo != "")
 			{
-                string[] sleeveline = sleeveInfo.Split(',');
+                sleeveline = sleeveInfo.Split(',');
                 int j = 0;
 				for(int i = 0; i < sleeveline.Length; i+=5)
 				{
@@ -435,6 +510,34 @@ namespace PgmDataMonitor
 					j++;
 				}
 			}
+
+			double oknum = (double)okCount;
+
+			int seikei_total = 0;
+			if(sleeveInfo != "")
+			{
+				for(int i = 0; i < seikeiLabel.Length; i++)
+				{
+					if(seikeiLabel[i].Text != "")
+					{
+						seikei_total += int.Parse(seikeiLabel[i].Text);
+					}
+				}
+			}
+			double total = (double)seikei_total;
+            double budomari = (double)(oknum / total * 100);
+
+			if(total > 0)
+			{
+				budomari = (double)(oknum / total * 100);
+			}
+			else//NaN
+			{
+				budomari = 0;
+			}
+
+            label20.Text = budomari.ToString("F1") + "％";
+			label208.Text = label22.Text = total.ToString();
 			
 			if(!Double.IsNaN(kadou))
 			{
@@ -463,6 +566,7 @@ namespace PgmDataMonitor
                 string[] hokoriNGline = hokoriNG.Split(',');
                 string[] keijoseidoNGline = keijoseidoNG.Split(',');
                 string[] etcNGline = etcNG.Split(',');
+                string[] tachiageNGline = tachiageNG.Split(',');
 
 				for(int i = 0; i < totalSleeve; i++)
 				{
@@ -479,19 +583,49 @@ namespace PgmDataMonitor
 					hokoriLabel[i].Text = hokoriNGline[i];
 					keijouseidoLabel[i].Text = keijoseidoNGline[i];
 					sonotaLabel[i].Text = etcNGline[i];
+					tachiageLabel[i].Text = tachiageNGline[i];
 				}
 			}
 		}
 
         private void monthCalendar1_DateSelected(object sender, DateRangeEventArgs e)
         {
+			timer1.Enabled = false;
+			timer2.Enabled = false;
+			timer2.Enabled = true;//restart
+
 		    DateTime start = e.Start;
 		    DateTime end = e.End;
 			SetSeikeiInfo(start, end);
         }
 
+        private void FormCalender_Load(object sender, EventArgs e)
+        {
+        }
+
         private void FormCalender_Shown(object sender, EventArgs e)
         {
+            if(formType == 0 || formType == 1)//LS,NQD
+			{
+				this.Width = Form1.SETDATA.shukeiWidth;
+				this.Height = Form1.SETDATA.shukeiHeight;
+	        }
+			else if(formType == 2)//HS
+			{
+				this.Width = Form3.SETDATA.shukeiWidth;
+				this.Height = Form3.SETDATA.shukeiHeight;
+			}
+			else if(formType == 3 || formType == 4)//マルチLS,マルチNQD
+			{
+				this.Width = Form4.SETDATA.shukeiWidth;
+				this.Height = Form4.SETDATA.shukeiHeight;
+			}
+			else if(formType == 5)//マルチHS
+			{
+				this.Width = Form6.SETDATA.shukeiWidth;
+				this.Height = Form6.SETDATA.shukeiHeight;
+			}
+
 			DateTime dt = DateTime.Now;
 			SetSeikeiInfo(dt, dt);
         }
@@ -508,14 +642,14 @@ namespace PgmDataMonitor
 			{
 				shimeFlg = true;
 				button2.Text = "戻　る";
-				label1.Text = "締める範囲";
+				label1.Text = "範　囲";
 				button1.Visible = true;
 			}
 			else
 			{
 				shimeFlg = false;
-				button2.Text = "本日分を締める";
-				label1.Text = "監　視　中";
+				button2.Text = "締める";
+				label1.Text = "監視中";
 				button1.Visible = false;
 			}
         }
@@ -571,10 +705,11 @@ namespace PgmDataMonitor
 //            DateTime end_datehani = monthCalendar1.SelectionEnd;
 //			string dailysign = sta_datehani.ToString("HHmmss");
 
+			string edit_gouki = "";
             if(formType == 0 || formType == 1)//LS,NQD
 			{
-				GetEditString(gouki, ref gouki);
-                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + gouki + "," + seihin + "," + label20.Text + "," +
+				GetEditString(gouki, ref edit_gouki);
+                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + edit_gouki + "," + seihin + "," + label20.Text + "," +
                                     label22.Text + "," + label18.Text + "," + label19.Text + ",";
 
 				symmaryStr += label36.Text + "," + label37.Text + "," + label38.Text + "," + label39.Text + "," + label40.Text + "," + 
@@ -588,7 +723,7 @@ namespace PgmDataMonitor
                 if(!retValue)
                 {
                     //締めの開始または終了が指定されていない。
-                    label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                    label49.Text = "締め開始/終了が未指定";
                     return;
                 }
 
@@ -596,8 +731,8 @@ namespace PgmDataMonitor
 	        }
 			else if(formType == 2)//HS
 			{
-				GetEditString(gouki, ref gouki);
-                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + gouki + "," + seihin + "," + label20.Text + "," +
+				GetEditString(gouki, ref edit_gouki);
+                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + edit_gouki + "," + seihin + "," + label20.Text + "," +
                                     label22.Text + "," + label18.Text + "," + label19.Text + ",";
 
 				symmaryStr += label36.Text + "," + label37.Text + "," + label38.Text + "," + label39.Text + "," + label40.Text + "," + 
@@ -611,7 +746,7 @@ namespace PgmDataMonitor
                 if(!retValue)
                 {
                     //締めの開始または終了が指定されていない。
-                    label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                    label49.Text = "締め開始/終了が未指定";
                     return;
                 }
 
@@ -619,8 +754,8 @@ namespace PgmDataMonitor
 			}
 			else if(formType == 3 || formType == 4)//マルチLS,マルチNQD
 			{
-				GetEditString(gouki, ref gouki);
-                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + gouki + "," + seihin + "," + label20.Text + "," +
+				GetEditString(gouki, ref edit_gouki);
+                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + edit_gouki + "," + seihin + "," + label20.Text + "," +
                                     label22.Text + "," + label18.Text + "," + label19.Text + ",";
 
 				symmaryStr += label36.Text + "," + label37.Text + "," + label38.Text + "," + label39.Text + "," + label40.Text + "," + 
@@ -634,7 +769,7 @@ namespace PgmDataMonitor
                 if(!retValue)
                 {
                     //締めの開始または終了が指定されていない。
-                    label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                    label49.Text = "締め開始/終了が未指定";
                     return;
                 }
 
@@ -642,8 +777,8 @@ namespace PgmDataMonitor
 			}
 			else if(formType == 5)//マルチHS
 			{
-				GetEditString(gouki, ref gouki);
-                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + gouki + "," + seihin + "," + label20.Text + "," +
+				GetEditString(gouki, ref edit_gouki);
+                string symmaryStr = sta_datehani.ToString("yyyyMMdd") + "," + edit_gouki + "," + seihin + "," + label20.Text + "," +
                                     label22.Text + "," + label18.Text + "," + label19.Text + ",";
 
 				symmaryStr += label36.Text + "," + label37.Text + "," + label38.Text + "," + label39.Text + "," + label40.Text + "," + 
@@ -657,12 +792,59 @@ namespace PgmDataMonitor
                 if(!retValue)
                 {
                     //締めの開始または終了が指定されていない。
-                    label49.Text = "締め開始/終了が指定されていないか、" + "\r\n" + "当日以外が指定されています";
+                    label49.Text = "締め開始/終了が未指定";
                     return;
                 }
 
                 MessageBox.Show("該当日のCSVを保存しました", "終了");
 			}
+        }
+
+        private void FormCalender_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if(formType == 0 || formType == 1)//LS,NQD
+			{
+//				Form1.SETDATA.shukeiWidth = this.Width;
+//				Form1.SETDATA.shukeiHeight = this.Height;
+	        }
+			else if(formType == 2)//HS
+			{
+//				Form3.SETDATA.shukeiWidth = this.Width;
+//				Form3.SETDATA.shukeiHeight = this.Height;
+			}
+			else if(formType == 3 || formType == 4)//マルチLS,マルチNQD
+			{
+//				Form4.SETDATA.shukeiWidth = this.Width;
+//				Form4.SETDATA.shukeiHeight = this.Height;
+			}
+			else if(formType == 5)//マルチHS
+			{
+//				Form6.SETDATA.shukeiWidth = this.Width;
+//				Form6.SETDATA.shukeiHeight = this.Height;
+			}
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+			timer2.Enabled = false;
+			timer1.Enabled = true;
+        }
+
+        private void alive_timer_Tick(object sender, EventArgs e)
+        {
+            //画面暗転阻止
+            SetThreadExecutionState(ExecutionState.DisplayRequired);
+
+            // ドラッグ操作の準備 (struct 配列の宣言)
+            INPUT[] input = new INPUT[1];  // イベントを格納
+
+            // ドラッグ操作の準備 (イベントの定義 = 相対座標へ移動)
+            input[0].mi.dx = 0;  // 相対座標で0　つまり動かさない
+            input[0].mi.dy = 0;  // 相対座標で0 つまり動かさない
+            input[0].mi.dwFlags = MOUSEEVENTF_MOVED;
+
+            // ドラッグ操作の実行 (イベントの生成)
+            SendInput(1, input, Marshal.SizeOf(input[0]));
         }
     }
 }

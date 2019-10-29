@@ -36,6 +36,8 @@ namespace PgmDataMonitor
 			public int hokoriNG;//ほこり
 			public int keijoseidoNG;//形状精度
 			public int etcNG;//その他
+			public int tachiageNG;//立ち上りNG
+            public DateTime workDt;
         }
 
 		public struct sameKataList
@@ -148,23 +150,49 @@ namespace PgmDataMonitor
 
 		FormCalender formCalender = null;
 		SettingForm setform = null;
+		FormSeikeiList formSeikeiList = null;
 		public string lastFileName = "";
+
+		public bool isSwitchType = false;
+		public bool isRemote = true;
 
         public Form3()
         {
             InitializeComponent();
 			ReadDataFromXml();
 
+			backup_timer.Interval = 3600000;
+			backup_timer.Enabled = true;
+
+			//フォームが最大化されないようにする
+			this.MaximizeBox = false;
+
 			for(int i = 0; i < SETDATA.OperatorName.Length; i++)//作業者名
 			{
 				comboBox12.Items.Add(SETDATA.OperatorName[i]);
 			}
 
-#if false//書き込み用 start
-			WriteDataToXml();
-#endif //書き込み用 end
+			//最大ショット数
+			numericUpDown5.Text = SETDATA.maxShotCount.ToString();
+
+			//IPアドレスから現場LOCALでの接続か、社内LANかを判断する
+			//ホスト名を取得
+			string hostname = System.Net.Dns.GetHostName();
+			//ホスト名からIPアドレスを取得
+			System.Net.IPAddress[] addr_arr = System.Net.Dns.GetHostAddresses(hostname);
+			foreach(System.Net.IPAddress addr in addr_arr)
+			{
+				string addr_str = addr.ToString();
+				//IPv4 && "10."で始まれば社内LAN
+				if ( addr_str.IndexOf( "." ) > 0 && addr_str.StartsWith("10.") )
+				{
+					isRemote = false;
+					break;
+				}
+			}
 
             // ListViewコントロールのプロパティを設定
+			this.ActiveControl = this.listView1;
             listView1.FullRowSelect = true;
             listView1.GridLines = true;
             listView1.Sorting = SortOrder.Ascending;
@@ -220,7 +248,7 @@ namespace PgmDataMonitor
 			columnShotCount = new ColumnHeader();
 			columnSeikeiCount = new ColumnHeader();
 
-			columnShime.Text = "締め位置";
+			columnShime.Text = "締め";
             columnSleeve.Text = "SL";
             columnTkeisu.Text = "T係数";
             columnInitialTemp.Text = "初期温度";
@@ -244,7 +272,7 @@ namespace PgmDataMonitor
             columnSeikeiCount.Text = "成型数";
 
             ColumnHeader[] colHeaderRegValue =
-              { columnShime, columnSleeve, columnTkeisu, columnInitialTemp, columnSeikeiTemp, columnKaatsuTime, columnZ3Value, columnZ3hosei, /*columnCC1Value, columnCC2Value, columnCC3Value, */
+              { columnShime, columnSleeve, columnTkeisu, columnZ3hosei, columnZ3Value, columnInitialTemp, columnSeikeiTemp, columnKaatsuTime, 
               columnCpValue, columnTact, columnDate, columnTimeStamp, columnNikuatsuUpper, columnNikuatsuValue, columnNikuatsuLower, columnResult, columnNgCause, columnShotCount, columnSeikeiCount};
             listView1.Columns.AddRange(colHeaderRegValue);
 
@@ -274,10 +302,14 @@ namespace PgmDataMonitor
 			this.Height = SETDATA.windowHeight;
 			listView1.Width = SETDATA.listviewWidth;
 			listView1.Height = SETDATA.listviewHeight;
+			this.groupBox14.Width = SETDATA.shukei_waku_Width;
+			this.groupBox14.Height = SETDATA.shukei_waku_Height;
+			this.groupBox14.Location = new Point(SETDATA.shukei_waku_x, SETDATA.shukei_waku_y);
 
-			System.Reflection.Assembly asm = System.Reflection.Assembly.GetExecutingAssembly();
-			System.Version ver = asm.GetName().Version;
-            this.Text += "  Ver:" + ver;
+
+			//最大サイズと最小サイズを現在のサイズに設定する
+//			this.MaximumSize = this.Size;
+//			this.MinimumSize = this.Size;
 
             this.AutoScroll = true;
 
@@ -357,6 +389,7 @@ namespace PgmDataMonitor
 								{
 									string datetimeData = fields[j];
 									timeValue = datetimeData.Substring(datetimeData.Length - 8);
+						            dateValue = datetimeData.Substring(0, 10);//日付
 								}
 								else if(j == 2)//seikeikiName
 								{
@@ -387,11 +420,11 @@ namespace PgmDataMonitor
 								}
 								else if(j == 15)//ct1Value
 								{
-									ct1Value = fields[j];
+									seikei1ct1up = fields[j];
 								}
 								else if(j == 16)//ct2Value
 								{
-									ct2Value = fields[j];
+									seikei1ct1dn = fields[j];
 								}
 								else if(j == 18)//cc32Value
 								{
@@ -454,12 +487,12 @@ namespace PgmDataMonitor
 	                    
 	                }
 
-					string[] item1 = {shimeSign, seikei1KataNo, seikei1Tkeisu, ct1Value, ct2Value, seikei1cc2_cc1, seikei1Zvalue, seikei1Zhosei, 
+					string[] item1 = {shimeSign, seikei1KataNo, seikei1Tkeisu, seikei1Zhosei, seikei1Zvalue, seikei1ct1up, seikei1ct1dn, seikei1cc2_cc1, 
 					seikei2cp, seikei1TotalTime, dateValue, timeValue, 
 					nikuUpLimit, nikuData, nikuLoLimit, nikuResult, resultCause, seikei1TounyuNo, tounyuValue};
 
 					listView1.Items.Insert(0, new ListViewItem(item1));//先頭に追加
-		            listView1.Font = new System.Drawing.Font("Times New Roman", 10, System.Drawing.FontStyle.Regular);
+		            listView1.Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Regular);
 
 					if(nikuResult == "OK")
 					{
@@ -509,7 +542,7 @@ namespace PgmDataMonitor
 					}
 	            }
 
-	            listView1.Font = new System.Drawing.Font("Times New Roman", 14, System.Drawing.FontStyle.Regular);
+	            listView1.Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Regular);
 				//ヘッダの幅を自動調節
 				listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
 
@@ -538,7 +571,7 @@ namespace PgmDataMonitor
 				//加圧時間の範囲外なら、強調表示
 				for(int i = 0; i < listView1.Items.Count; i++)
 				{
-					string tmp_cc32Value = listView1.Items[i].SubItems[5].Text;
+					string tmp_cc32Value = listView1.Items[i].SubItems[7].Text;
 					double kaatsuTime = double.Parse(tmp_cc32Value);
 					
 					string slNum = listView1.Items[i].SubItems[1].Text;
@@ -547,7 +580,7 @@ namespace PgmDataMonitor
 						if(kaatsuTime < currentKaatsujikanLo || currentKaatsujikanUp < kaatsuTime)
 						{
 							listView1.Items[i].ForeColor = Color.Yellow;
-				            listView1.Items[i].Font = new System.Drawing.Font("Times New Roman", 14, System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic);
+				            listView1.Items[i].Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Bold);
 						}
 					}
 				}
@@ -559,6 +592,11 @@ namespace PgmDataMonitor
 
 				timer1.Enabled = true;
 				button1.Enabled = false;
+
+				System.Reflection.Assembly asm = System.Reflection.Assembly.GetExecutingAssembly();
+				System.Version ver = asm.GetName().Version;
+	            this.Text += "  " + currentMachine + "  Ver:" + ver;
+
 				return;
 			}
 			//直前の成型号機
@@ -575,6 +613,21 @@ namespace PgmDataMonitor
 			{
 				button1.Enabled = true;
 			}
+
+        }
+
+        private void Form3_Load(object sender, EventArgs e)
+        {
+			if(formCalender == null || formCalender.IsDisposed)
+			{
+				formCalender = new FormCalender();
+				formCalender.TopLevel = false;
+	            this.groupBox14.Controls.Add(formCalender);
+				formCalender.Location = new Point(3, 12);
+				formCalender.Show();
+				formCalender.BringToFront();
+				formCalender.SetParentForm(this, SETDATA.machineType);
+            }
         }
 
         private void ParseLogString(string [] strResults)
@@ -743,7 +796,7 @@ namespace PgmDataMonitor
 
 			currentOperator = comboBox12.Text;
 			currentHousharitsu = numericUpDown2.Text;
-			logStr += "," + currentHousharitsu + "," + currentOperator + "," + seikei1KataNo + "," + seikei1TounyuNo + "," + tounyuValue;
+			logStr += "," + currentHousharitsu + "," + currentOperator + "," + seikei1KataNo + "," + seikei1TounyuNo + "," + tounyuValue + "," + numericUpDown3.Text + "," + numericUpDown4.Text + "," + numericUpDown5.Text;
 
 			if(backTimeValue != timeValue)//ログファイルが更新されていても、最新時間が同じ場合の念の為ガード
 			{
@@ -768,7 +821,7 @@ namespace PgmDataMonitor
 			int boundPos = stCurrentDir.LastIndexOf("\\");
             string str1 = stCurrentDir.Substring(0, boundPos);
 
-			if(comboBox2.SelectedIndex == 0)//HS1のみ8
+			if(comboBox2.SelectedIndex == 0)//HS1のみ
 			{
             	str1 += "\\Log";
 			}
@@ -802,7 +855,10 @@ namespace PgmDataMonitor
 					}
 
 					//ログファイルのリストに入れる(＆昇順に並べ替えている)
-					sl.Add(destDt, f.Name);
+					if(!sl.ContainsKey(destDt))
+					{
+						sl.Add(destDt, f.Name);
+					}
 	            }
 	        }
 			catch (System.IO.IOException ex)
@@ -922,10 +978,39 @@ namespace PgmDataMonitor
 				}
 				justPos = pos;
 
+				//最新ファイル名が直前のファイル名と異なる場合、ファイル名と更新時間を入れ替え
+				if(backCsvFile != lastFileName)
+				{
+					backCsvFile = lastFileName;
+					backFileTime = lastDt;
+					updateMode = 2;
+				}
+				else
+				{
+					//最新ファイル名が直前のファイル名と同じで時間が異なる場合、更新時間を入れ替え
+					str_back = backFileTime.ToString();
+					str_last = lastDt.ToString();
+					if(str_back != str_last)
+					{
+						backFileTime = lastDt;
+						updateMode = 1;
+					}
+					//最新ファイル名が直前のファイル名と同じで時間も同じ場合、ループに戻る(ログファイルが途中で変わった場合)
+					else
+					{
+						updateMode = 0;
+						if(sr != null)
+						{
+							sr.Close();
+						}
+						File.Delete(@dstFile);//一時ファイルは削除
+						continue;
+					}
+				}
+
 	            //最後行のParse
 	            string lastline = line;
 	            string[] strResults = lastline.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-
 	            if(strResults.Length <= 4)//異常系：成型条件変更等のログの場合、抜ける
 	            {
 					if(sr != null)
@@ -934,22 +1019,6 @@ namespace PgmDataMonitor
 					}
 					File.Delete(@dstFile);//一時ファイルは削除
 					continue;
-				}
-
-				//最新ファイル名が直前のファイル名と異なる場合、ファイル名と更新時間を入れ替え
-				if(backCsvFile != lastFileName)
-				{
-					backCsvFile = lastFileName;
-					backFileTime = lastDt;
-					updateMode = 2;
-				}
-				//最新ファイル名が直前のファイル名と同じで時間が異なる場合、更新時間を入れ替え
-				str_back = backFileTime.ToString();
-				str_last = lastDt.ToString();
-				if(backCsvFile == lastFileName && str_back != str_last)
-				{
-					backFileTime = lastDt;
-					updateMode = 1;
 				}
 
 				hinshuValue = strResults[1];
@@ -972,7 +1041,7 @@ namespace PgmDataMonitor
 			            numericUpDown12.Value = (decimal)upper;
 			            numericUpDown13.Value = (decimal)lower;
 			            label1.Text = currentSeihin;
-
+						label1.ForeColor = Color.Black;
 						break;
 					}
 					noData++;
@@ -985,12 +1054,14 @@ namespace PgmDataMonitor
 		            numericUpDown12.Text = "1.222";
 		            numericUpDown13.Text = "1.111";
 		            label1.Text = "製品登録して下さい";
+					label1.ForeColor = Color.Red;
 				}
 
 				//更新部分を検索する
 				int lastIndex = 0;
 				string lastTime = "";
 				int lastPos = 0;
+				bool isLastHist = false;
 				if(updateMode == 1)//ログファイルが同一で、時間のみ更新があった場合
 				{
 					if(listView1.Items.Count > 0)//ListViewに1つでも登録がある
@@ -1022,6 +1093,7 @@ namespace PgmDataMonitor
 							
 							if(timeValue == lastTime)
 							{
+								isLastHist = true;
 								break;
 							}
 							
@@ -1036,10 +1108,21 @@ namespace PgmDataMonitor
 							//データ取得
 			                line = sr.ReadLine();
 
-							if (indexPos <= lastPos)//前回の更新部分までスキップ
+							if(isLastHist)//最新の履歴がCSVにあった
 							{
-							    indexPos++;
-							    continue;
+								if (indexPos <= lastPos)//前回の更新部分までスキップ
+								{
+								    indexPos++;
+								    continue;
+								}
+							}
+							else
+							{
+								if (indexPos < (lastPos - 1))
+								{
+								    indexPos++;
+								    continue;
+								}
 							}
 
 	                        strResults = line.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1104,6 +1187,7 @@ namespace PgmDataMonitor
 			}
         }
 
+
 		public void LogFileOut(string logMessage)
 		{
             string stCurrentDir = System.IO.Directory.GetCurrentDirectory();
@@ -1134,7 +1218,7 @@ namespace PgmDataMonitor
 				ClearListView();
 			}
 
-			string[] item1 = {shimeSign, seikei1KataNo, seikei1Tkeisu, ct1Value, ct2Value, seikei1cc2_cc1, seikei1Zvalue, seikei1Zhosei, 
+			string[] item1 = {shimeSign, seikei1KataNo, seikei1Tkeisu, seikei1Zhosei, seikei1Zvalue, seikei1ct1up, seikei1ct1dn, seikei1cc2_cc1, 
 			seikei2cp, seikei1TotalTime, dateValue, timeValue, 
 			nikuUpLimit, nikuData, nikuLoLimit, nikuResult, resultCause, seikei1TounyuNo, tounyuValue};
 
@@ -1183,7 +1267,7 @@ namespace PgmDataMonitor
 				listView1.Items[0].ForeColor = Color.Purple;
 			}
 
-            listView1.Font = new System.Drawing.Font("Times New Roman", 14, System.Drawing.FontStyle.Regular);
+            listView1.Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Regular);
 
 			//加圧時間の範囲外なら、強調表示
 			//加圧時間の決定
@@ -1211,7 +1295,7 @@ namespace PgmDataMonitor
 				if(kaatsuTime < currentKaatsujikanLo || currentKaatsujikanUp < kaatsuTime)
 				{
 					listView1.Items[0].ForeColor = Color.Yellow;
-		            listView1.Items[0].Font = new System.Drawing.Font("Times New Roman", 14, System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic);
+		            listView1.Items[0].Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Bold);
 				}
 			}
 
@@ -1231,6 +1315,7 @@ namespace PgmDataMonitor
 
 		public bool WriteDataToCsv(string logStr, string seihin, string machine, string [] strResults)
 		{
+			string path = "";
             try
             {
 		        // appendをtrueにすると，既存のファイルに追記
@@ -1238,7 +1323,7 @@ namespace PgmDataMonitor
 		        var append = false;
 		        // 出力用のファイルを開く
                 string stCurrentDir = System.IO.Directory.GetCurrentDirectory();
-                string path = currentCsvFile = stCurrentDir + "\\PgmOut_" + seihin + "_" + machine + ".csv";
+                path = currentCsvFile = stCurrentDir + "\\PgmOut_" + seihin + "_" + machine + ".csv";
 
                 string buf = "";
                 if(System.IO.File.Exists(path))//既にファイルが存在する
@@ -1255,7 +1340,7 @@ namespace PgmDataMonitor
 						buf += string.Format(",成型機");
 						buf += string.Format(",製品名");
 						buf += string.Format(",ﾛｸﾞﾌｧｲﾙ名");
-						buf += string.Format(",締め位置");
+						buf += string.Format(",締め");
 
 						for(int i = 0; i < strResults.Length; i++)
 						{
@@ -1272,6 +1357,9 @@ namespace PgmDataMonitor
 						buf += string.Format(",ｽﾘｰﾌﾞNo");
 						buf += string.Format(",ｼｮｯﾄ数");
 						buf += string.Format(",成型数");
+						buf += string.Format(",加圧時間上限");
+						buf += string.Format(",加圧時間下限");
+						buf += string.Format(",限界ｼｮｯﾄ数");
 
 	                    sw.WriteLine(buf);
 
@@ -1301,8 +1389,101 @@ namespace PgmDataMonitor
 				LogFileOut(errorStr);
 				return false;
 		    }
-		    return true;
 
+			FileCopyToServer(path);
+
+		    return true;
+		}
+
+		public bool FileCopyToServer(string path)
+		{
+			try
+			{
+				string serverPath = "";
+				if(isRemote)
+				{
+					serverPath = "\\192.168.0.2\\Public\\work\\period";
+				}
+				else
+				{
+					serverPath = "\\ts-xhl5A9\\share\\ﾊﾞｯｸｱｯﾌﾟ臨時\\永田";
+				}
+				serverPath = "\\" + serverPath;
+
+				//フォルダの存在確認(接続確認)
+				if(!System.IO.Directory.Exists(serverPath))
+				{
+					return false;
+				}
+
+				string fileName = "\\PgmOut_" + currentSeihin + "_" + currentMachine + ".csv";
+				string dstFile = serverPath + fileName;
+
+				//フォルダ配下にCSVファイルがなければ保存
+	            bool isExist = System.IO.File.Exists(dstFile);
+	            if(isExist)//既にファイルが存在する
+				{
+					if(IsFileLocked(dstFile))//CSVが開けるかでアクセス許可を確認する
+					{
+						return false;
+					}
+					//CSVファイルをサーバー上にコピーする(上書き)
+					System.IO.File.Copy(@path, @dstFile, true);
+				}
+				else
+				{
+					//CSVファイルをサーバー上にコピーする
+					System.IO.File.Copy(@path, @dstFile);
+				}
+			}
+			catch
+			{
+				string errorStr = "サーバーに周期CSVをコピーできなかった可能性があります";
+			    System.Console.WriteLine(errorStr);
+				LogFileOut(errorStr);
+				return false;
+			}
+
+			return true;
+		}
+
+
+		private bool IsFileLocked(string path)
+		{
+		    FileStream stream = null;
+		 
+		    try
+		    {
+		        stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+		    }
+		    catch
+		    {
+		        return true;
+		    }
+		    finally
+		    {
+		        if (stream != null)
+		        {
+		            stream.Close();
+		        }
+		    }
+		 
+		    return false;
+		}
+
+		public void WriteHeaderToCsv(ref string buf, string [] strResults)
+		{
+			for(int i = 0; i < strResults.Length; i++)
+			{
+				if(i == 0)
+				{
+					buf = string.Format(strResults[i]);
+				}
+				else
+				{
+					buf += ',' + string.Format(strResults[i]);
+				}
+			}
 		}
 
 		public class SYSSET:System.ICloneable
@@ -1311,6 +1492,12 @@ namespace PgmDataMonitor
 			public int windowHeight;
 			public int listviewWidth;
 			public int listviewHeight;
+			public int shukeiWidth;
+			public int shukeiHeight;
+            public int shukei_waku_Width;
+            public int shukei_waku_Height;
+            public int shukei_waku_x;
+            public int shukei_waku_y;
 			public int maxShotCount;
 
 			public string[] goukiName =		{"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -1393,6 +1580,7 @@ namespace PgmDataMonitor
                                              "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                                              "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""};
 
+			public string backupCsvDate = "";
 
 			public int machineType;//2:HS
 			public string selectedMachine = "";
@@ -1475,6 +1663,10 @@ namespace PgmDataMonitor
         {
 			string errorStr = "正常に終了しました。";
 			LogFileOut(errorStr);
+
+//            SETDATA.windowWidth = this.Width;
+//            SETDATA.windowHeight = this.Height;
+            WriteDataToXml();
 
             Application.Exit();
         }
@@ -1666,6 +1858,8 @@ namespace PgmDataMonitor
 				}
 
 				timer1.Enabled = true;
+
+				FileCopyToServer(currentCsvFile);
 			}
 
         }
@@ -1696,15 +1890,20 @@ namespace PgmDataMonitor
 
         private void Form3_FormClosing(object sender, FormClosingEventArgs e)
         {
-			string mes = "アプリを終了すると成型機からのデータを受け取れなくなります！" + "\r\n" + "本当に終了しますか？";
-			DialogResult result = MessageBox.Show(mes, "PGM成型機監視アプリ", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
-			if(result == DialogResult.Yes)
+			if(!isSwitchType)
 			{
-//	            MessageBox.Show("作業が終わったら、すぐ起動して下さい！", "PGM成型機監視アプリ", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+				string mes = "アプリを終了すると成型機からのデータを受け取れなくなります！" + "\r\n" + "本当に終了しますか？";
+				DialogResult result = MessageBox.Show(mes, "PGM成型機監視アプリ", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
+				if(result == DialogResult.Yes)
+				{
+				}
+				else
+				{
+	                e.Cancel = true;
+				}
 			}
 			else
 			{
-                e.Cancel = true;
 			}
         }
 
@@ -1732,7 +1931,7 @@ namespace PgmDataMonitor
 										ref string ref_nikuatsuNG, ref string ref_kizuNG, ref string ref_butsuNG, ref string ref_yakeNG, 
 										ref string ref_hibicrackNG, ref string ref_gasukizuNG, ref string ref_houshakizuNG, 
 										ref string ref_giratsukikumoriNG, ref string ref_hennikumendareNG, ref string ref_yogoreNG, 
-										ref string ref_hokoriNG, ref string ref_keijoseidoNG, ref string ref_etcNG
+										ref string ref_hokoriNG, ref string ref_keijoseidoNG, ref string ref_etcNG, ref string ref_tachiageNG
 		)
         {
             DateTime dtsta = DateTime.Parse(start);
@@ -1756,6 +1955,7 @@ namespace PgmDataMonitor
 			int hokoriNG = 0;//ほこり
 			int keijoseidoNG = 0;//形状精度
 			int etcNG = 0;//その他
+			int tachiageNG = 0;//立ち上りNG
 
             double nikuData = 0;
             double maxNiku = 0;
@@ -1765,6 +1965,10 @@ namespace PgmDataMonitor
 			int nikuCount = 0;
 			var nikuList = new List<double>();
 			List<SleeveList> list = new List<SleeveList>();
+
+			string shime_sta = "";
+            string shime_end = "";
+			GetShimeHani(dtsta, dtend, ref shime_sta, ref shime_end);
 
             for (int i = 0; i < listView1.Items.Count; i++)
             {
@@ -1818,6 +2022,17 @@ namespace PgmDataMonitor
 
                 listDT = listDate + " " + listTime;
                 DateTime dttarget = DateTime.Parse(listDT);
+
+				//締めサインがあればその範囲で数える。なければ0:00~23:59
+				if(shime_sta != "")
+				{
+					dtsta = DateTime.Parse(shime_sta);
+				}
+				if(shime_end != "")
+				{
+					dtend = DateTime.Parse(shime_end);
+				}
+
                 if(dtsta <= dttarget && dttarget <= dtend)
                 {
 					allSleeve++;
@@ -1881,6 +2096,10 @@ namespace PgmDataMonitor
 						{
 							etcNG++;//その他
 						}
+						else if(ngcause == "立ち上り")
+						{
+							tachiageNG++;//立ち上りNG
+						}
 	                }
 	                
 	                if(nikuatsuSokutei != "-" && nikuatsuSokutei != "")
@@ -1911,6 +2130,8 @@ namespace PgmDataMonitor
 	                        SleeveList sl = new SleeveList();
 	                        sl.sleeveNumber= sleeveNumber;
 							sl.shotCount = int.Parse(shotCount);
+							sl.workDt = dttarget;
+							sl.seikeiSuu++;
 
 							if(result == "OK")
 							{
@@ -1974,6 +2195,10 @@ namespace PgmDataMonitor
 							{
 								sl.etcNG++;
 							}
+							else if(ngcause == "立ち上り")
+							{
+								sl.tachiageNG++;
+							}
 
 							list.Add(sl);
 						}
@@ -1984,12 +2209,14 @@ namespace PgmDataMonitor
 								if(list[j].sleeveNumber == sleeveNumber)
 								{
 									int sc = int.Parse(shotCount);
-									if(list[j].shotCount < sc)
+
+									SleeveList tmpList = list[j];
+									if(list[j].workDt < dttarget)
 									{
-										SleeveList tmpList = list[j];
 										tmpList.shotCount = sc;
-										list[j] = tmpList;
 									}
+									tmpList.seikeiSuu++;
+									list[j] = tmpList;
 
 									SleeveList causeList = list[j];
 
@@ -2055,6 +2282,10 @@ namespace PgmDataMonitor
 									{
 										causeList.etcNG++;
 									}
+									else if(ngcause == "立ち上り")
+									{
+										causeList.tachiageNG++;
+									}
 									
 									list[j] = causeList;
 
@@ -2067,15 +2298,8 @@ namespace PgmDataMonitor
 
             }
 
-
-			//一括入力のComboBoxのSLを再登録
-			comboBox1.Items.Clear();
-			for(int i = 0; i < list.Count; i++)
-			{
-				comboBox1.Items.Add(list[i].sleeveNumber);
-			}
-
             //OK,NGの数を結合する
+            ngCount -= tachiageNG;//立上りNGはNGとしてカウントしない
             okngStr = okCount.ToString() + "," + ngCount.ToString();
             //各不良原因の数を結合する
 			ngcauseStr = nikuatsuNG + "," + 
@@ -2108,14 +2332,16 @@ namespace PgmDataMonitor
 			int jj = 0;
 			for(int i = 0; i < list.Count; i++)
 			{
-				int seikeiTotal = list[i].ryohinSuu + list[i].furyouSuu;
+				int tachi = list[i].tachiageNG;
+				int furyou = list[i].furyouSuu - tachi;
+				int seikeiTotal = list[i].seikeiSuu - tachi;
 				if(jj == 0)
 				{
-					sleeveInfo += list[i].sleeveNumber + "," + list[i].shotCount.ToString() + "," + seikeiTotal.ToString() + "," + list[i].ryohinSuu.ToString() + "," + list[i].furyouSuu.ToString();
+					sleeveInfo += list[i].sleeveNumber + "," + list[i].shotCount.ToString() + "," + seikeiTotal.ToString() + "," + list[i].ryohinSuu.ToString() + "," + furyou.ToString();
 				}
 				else
 				{
-					sleeveInfo += "," + list[i].sleeveNumber + "," + list[i].shotCount.ToString() + "," + seikeiTotal.ToString() + "," + list[i].ryohinSuu.ToString() + "," + list[i].furyouSuu.ToString();
+					sleeveInfo += "," + list[i].sleeveNumber + "," + list[i].shotCount.ToString() + "," + seikeiTotal.ToString() + "," + list[i].ryohinSuu.ToString() + "," + furyou.ToString();
 				}
 				jj++;
 			}
@@ -2142,6 +2368,7 @@ namespace PgmDataMonitor
 					ref_hokoriNG = list[j].hokoriNG.ToString();
 					ref_keijoseidoNG = list[j].keijoseidoNG.ToString();
 					ref_etcNG = list[j].etcNG.ToString();
+					ref_tachiageNG = list[j].tachiageNG.ToString();
 					continue;
 				}
 
@@ -2158,6 +2385,7 @@ namespace PgmDataMonitor
 				ref_hokoriNG += "," + list[j].hokoriNG.ToString();
 				ref_keijoseidoNG += "," + list[j].keijoseidoNG.ToString();
 				ref_etcNG += "," + list[j].etcNG.ToString();
+				ref_tachiageNG += "," + list[j].tachiageNG.ToString();
 			}
 
         }
@@ -2363,6 +2591,7 @@ namespace PgmDataMonitor
 				}
 
 			}
+			FileCopyToServer(currentCsvFile);
 		}
 
         private void SetShimeSign(string sign)
@@ -2442,6 +2671,7 @@ namespace PgmDataMonitor
 				}
 
 			}
+			FileCopyToServer(currentCsvFile);
 		}
 
 		public bool WriteDailySummaryToCsv(DateTime sta_datehani, DateTime end_datehani, string logStr)
@@ -2474,11 +2704,11 @@ namespace PgmDataMonitor
 			}
 
 			DateTime dt = DateTime.Now;
-			string dailysign = dt.ToString("MMddHHmmss");
+			string dailysign = dt.ToString("yyyyMMdd_HHmmss");
 
             string stCurrentDir = System.IO.Directory.GetCurrentDirectory();
 			string dailyDir = stCurrentDir + "\\daily";
-            string dailyPath = dailyDir + "\\" + currentSeihin + "_" + currentMachine + "_" + sta_sign + "to" + end_sign + "_" + dailysign + ".csv";
+            string dailyPath = dailyDir + "\\" + currentSeihin + "_" + currentMachine + "_" + dailysign + "_daily.csv";
 
 			StreamWriter writer = null;
 
@@ -2525,6 +2755,14 @@ namespace PgmDataMonitor
 				buf += logStr;
                 writer.WriteLine(buf);
 
+				if(formCalender != null && !formCalender.IsDisposed)
+				{
+					Bitmap bmp = new Bitmap(formCalender.Width, formCalender.Height);
+		            string dailyPng = dailyDir + "\\" + currentSeihin + "_" + currentMachine + "_" + dailysign + "_daily.png";
+					formCalender.DrawToBitmap(bmp, new Rectangle(0, 0, formCalender.Width, formCalender.Height));
+					bmp.Save(dailyPng);
+					bmp.Dispose();
+				}
 		    }
 			catch (System.IO.IOException ex)
 			{
@@ -2539,128 +2777,73 @@ namespace PgmDataMonitor
 				{
 					writer.Close();
 				}
-
 			}
+
+			DailyFileCopyToServer(dailyPath);
+
 			return true;
 
 		}
 
-		public bool WriteDailyDataToCsv(DateTime sta_datehani, DateTime end_datehani)
+		public bool DailyFileCopyToServer(string path)
 		{
-			DateTime dt = DateTime.Now;
-			string dailysign = dt.ToString("MMddHHmmss");
-			string sta_sign = sta_datehani.ToString("MMdd");
-			string end_sign = end_datehani.ToString("MMdd");
-			string sta = sta_sign + "開始";
-			string end = end_sign + "終了";
-
-			//CSV更新:別ファイルに全て読んで、一部を書き換えてファイル名を変える
-	        string line = "";
-	        StreamReader reader = null;
-	        StreamWriter writer = null;
 			try
 			{
-	            reader = new StreamReader(currentCsvFile, System.Text.Encoding.GetEncoding("Shift_JIS"));
-	            string[] lines = File.ReadAllLines(currentCsvFile);
-	            int lineMax = lines.Length;//CSVの行数取得
-
-
-				int count = 0;
-				int staPos = 0;
-				int endPos = 0;
-				while(reader.Peek() >= 0)//書き込む場所を探す
+				string serverPath = "";
+				if(isRemote)
 				{
-					line = reader.ReadLine();
-
-					if(count == 0)
-					{
-						count++;
-						continue;
-					}
-
-					string[] cols = line.Split(',');
-					if(cols[5] == sta)
-					{
-						staPos = count;
-					}
-					else if(cols[5] == end)
-					{
-						endPos = count;
-					}
-					count++;
+					serverPath = "\\192.168.0.2\\Public\\work\\daily";
 				}
-
-				if(staPos == 0 || endPos == 0)//締めのマークが無い場合
+				else
 				{
-					if(reader != null)
-					{
-						reader.Close();
-					}
+					serverPath = "\\ts-xhl5A9\\share\\ﾊﾞｯｸｱｯﾌﾟ臨時\\永田";
+				}
+				serverPath = "\\" + serverPath;
+
+				//フォルダの存在確認(接続確認)
+				if(!System.IO.Directory.Exists(serverPath))
+				{
 					return false;
 				}
 
-				reader.BaseStream.Seek(0, SeekOrigin.Begin);//先頭に戻す
-				reader.DiscardBufferedData();
-
-                string stCurrentDir = System.IO.Directory.GetCurrentDirectory();
-				string dailyDir = stCurrentDir + "\\daily";
-                string dailyPath = dailyDir + "\\" + currentSeihin + "_" + currentMachine + "_" + sta_sign + "to" + end_sign + "_" + dailysign + ".csv";
-
-				//dailyフォルダが存在していなければ作成
-				if(!Directory.Exists(dailyDir))
+				//サーバーに日付フォルダが無ければ作成
+				DateTime dt = DateTime.Now;
+				string daily_name = dt.ToString("yyyyMMdd");
+				serverPath = serverPath + "\\" + daily_name;
+				
+				if(!Directory.Exists(serverPath))
 				{
-					Directory.CreateDirectory(dailyDir);
+					Directory.CreateDirectory(serverPath);
 				}
 
-				writer = new StreamWriter(dailyPath, false, System.Text.Encoding.GetEncoding("Shift_JIS"));
+				//フォルダ配下にCSVファイルがなければ保存
+				string dailysign = dt.ToString("yyyyMMdd_HHmmss");
+	            string dstFile = serverPath + "\\" + currentSeihin + "_" + currentMachine + "_マルチ_" + dailysign + "_daily.csv";
 
-				count = 0;
-				while(reader.Peek() >= 0)
+	            bool isExist = System.IO.File.Exists(dstFile);
+	            if(isExist)//既にファイルが存在する
 				{
-					line = reader.ReadLine();
-
-					if(count == 0)
+					if(IsFileLocked(dstFile))//CSVが開けるかでアクセス許可を確認する
 					{
-						writer.WriteLine(line);
-						count++;
-						continue;
+						return false;
 					}
-
-					if(count < staPos)
-					{
-						count++;
-						continue;
-					}
-					else if(count > endPos)
-					{
-						count++;
-						continue;
-					}
-
-					writer.WriteLine(line);
-					count++;
+					//CSVファイルをサーバー上にコピーする(上書き)
+					System.IO.File.Copy(@path, @dstFile, true);
 				}
-
+				else
+				{
+					//CSVファイルをサーバー上にコピーする
+					System.IO.File.Copy(@path, @dstFile);
+				}
 			}
-			catch (System.IO.IOException ex)
+			catch
 			{
-				string errorStr = "肉厚入力時にdayファイルを開けなかった可能性があります";
+				string errorStr = "サーバーに日毎のCSVをコピーできなかった可能性があります";
 			    System.Console.WriteLine(errorStr);
-		        System.Console.WriteLine(ex.Message);
 				LogFileOut(errorStr);
+				return false;
 			}
-			finally
-			{
-				if(reader != null)
-				{
-					reader.Close();
-				}
-				if(writer != null)
-				{
-					writer.Close();
-				}
 
-			}
 			return true;
 		}
 
@@ -2773,11 +2956,18 @@ namespace PgmDataMonitor
 				while(reader.Peek() >= 0)
 				{
 					line = reader.ReadLine();
+
+					if(index == 0)
+					{
+						index++;
+						continue;
+					}
+
 					string[] cols = line.Split(',');
 
 		            sameKataList katalist = new sameKataList();//とりあえず全部、リストにいれる
-		            katalist.sleeveNumber = cols[6];
-                    katalist.result = cols[24];
+		            katalist.sleeveNumber = cols[11];
+                    katalist.result = cols[60];
 					katalist.lineNumber = index;
 					list.Add(katalist);
 
@@ -2797,7 +2987,7 @@ namespace PgmDataMonitor
 						editCount++;
 					}
 
-					if(editCount == selectCount)
+					if(editCount == selectCount)//要求の削除数に達した
 					{
 						break;
 					}
@@ -2817,7 +3007,7 @@ namespace PgmDataMonitor
 						continue;
 					}
 
-					if(pos == list[pos].lineNumber && list[pos].isEdit)
+					if(pos == list[pos - 1].lineNumber && list[pos - 1].isEdit)
 					{
 						string[] cols = line.Split(',');
 						string buf = "";
@@ -2827,11 +3017,11 @@ namespace PgmDataMonitor
 							{
 								buf = cols[i];
 							}
-							else if(i == 24)
+							else if(i == 60)
 							{
 								buf += "," + "NG";
 							}
-							else if(i == 25)
+							else if(i == 61)
 							{
 								buf += "," + selectCause;
 							}
@@ -2902,6 +3092,7 @@ namespace PgmDataMonitor
 			comboBox1.Text = "";
 			comboBox3.Text = "";
 			numericUpDown1.Text = "1";
+			FileCopyToServer(currentCsvFile);
         }
 
         private void numericUpDown3_ValueChanged(object sender, EventArgs e)
@@ -3014,7 +3205,7 @@ namespace PgmDataMonitor
 				int index = 0xFFFF;
 				for(int i = 0; i < SETDATA.seihinName.Length; i++)
 				{
-					if(SETDATA.seihinName[i] == label1.Text)
+					if(SETDATA.seihinName[i] == currentSeihin)
 					{
 						if(SETDATA.KaatsuJikanUpper[i] != "" && SETDATA.KaatsuJikanLower[i] != "")
 						{
@@ -3032,8 +3223,503 @@ namespace PgmDataMonitor
 
 					numericUpDown12.Text = Form1.SETDATA.nikuUpper[index];
 					numericUpDown13.Text = Form1.SETDATA.nikuLower[index];
+					label1.Text = currentSeihin;
+					label1.ForeColor = Color.Black;
+					UpdateData();
 				}
 			}
+        }
+
+		public void UpdateData()
+		{
+			//CSV更新:別ファイルに全て読んで、一部を書き換えてファイル名を変える
+            string line = "";
+            StreamReader reader = null;
+            StreamWriter writer = null;
+            string path = "";
+			try
+			{
+                reader = new StreamReader(currentCsvFile, System.Text.Encoding.GetEncoding("Shift_JIS"));
+                string[] lines = File.ReadAllLines(currentCsvFile);
+                int lineMax = lines.Length;//CSVの行数取得
+
+                path = currentCsvFile + ".tmp";
+				writer = new StreamWriter(path, false, System.Text.Encoding.GetEncoding("Shift_JIS"));
+
+				int pos = 0;
+				while(reader.Peek() >= 0)
+				{
+					line = reader.ReadLine();
+
+					if(pos == 0)
+					{
+						writer.WriteLine(line);
+						pos++;
+						continue;
+					}
+
+					string[] cols = line.Split(',');
+					string buf = "";
+					for(int i = 0; i < cols.Length; i++)
+					{
+						if(i == 0)
+						{
+							buf = cols[i];
+						}
+						else if(i == 57)//肉厚上限
+						{
+							buf += "," + nikuUpLimit;
+						}
+						else if(i == 59)//肉厚下限
+						{
+							buf += "," + nikuLoLimit;
+						}
+						else
+						{
+							buf += "," + cols[i];
+						}
+					}
+					writer.WriteLine(buf);
+					pos++;
+				}
+
+				//ListViewを更新
+				for(int i = 0; i < listView1.Items.Count; i++)
+				{
+					//肉厚上限、下限を置換
+					listView1.Items[i].SubItems[12].Text = nikuUpLimit;//肉厚上限
+					listView1.Items[i].SubItems[14].Text = nikuLoLimit;//肉厚下限
+
+		            if(listView1.Items[i].SubItems[1].Text == "0" || listView1.Items[i].SubItems[1].Text == "")
+		            {
+						continue;
+					}
+
+					//加圧時間の範囲内外を判定して文字色決定
+					string tmp_cc32Value = listView1.Items[i].SubItems[7].Text;
+					double kaatsuTime = double.Parse(tmp_cc32Value);
+
+					if(kaatsuTime < currentKaatsujikanLo || currentKaatsujikanUp < kaatsuTime)
+					{
+						listView1.Items[i].ForeColor = Color.Yellow;
+			            listView1.Items[i].Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Bold);
+					}
+					else
+					{
+						//日勤時間帯
+						string strNoonSta = "08:00:00";
+						string strNoonEnd = "17:00:00";
+						DateTime noonSta = DateTime.Parse(strNoonSta);
+						DateTime noonEnd = DateTime.Parse(strNoonEnd);
+
+						//夕勤時間帯
+						string strSunsetSta = "17:00:00";
+						string strSunsetEnd = "23:59:59";
+						DateTime sunsetSta = DateTime.Parse(strSunsetSta);
+						DateTime sunsetEnd = DateTime.Parse(strSunsetEnd);
+
+						//夜勤時間帯
+						string strNightSta = "00:00:01";
+						string strNightEnd = "08:00:00";
+						DateTime nightSta = DateTime.Parse(strNightSta);
+						DateTime nightEnd = DateTime.Parse(strNightEnd);
+
+						DateTime dt3 = DateTime.Parse(listView1.Items[i].SubItems[11].Text);//タイムスタンプ(文字列)→DateTimeに変換
+
+						if(noonSta <= dt3 && dt3 < noonEnd)
+						{
+							listView1.Items[i].ForeColor = Color.Blue;//青
+						}
+						if(sunsetSta <= dt3 && dt3 < sunsetEnd)
+						{
+							listView1.Items[i].ForeColor = Color.Green;//緑
+						}
+						if(nightSta <= dt3 && dt3 < nightEnd)
+						{
+							listView1.Items[i].ForeColor = Color.Purple;//赤
+						}
+			            listView1.Items[i].Font = new System.Drawing.Font("Times New Roman", 12, System.Drawing.FontStyle.Regular);
+			        }	
+
+				}
+                listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+			}
+			catch (System.IO.IOException ex)
+			{
+				string errorStr = "型番登録時にCSVファイルを開けなかった可能性があります";
+			    System.Console.WriteLine(errorStr);
+		        System.Console.WriteLine(ex.Message);
+				LogFileOut(errorStr);
+			}
+			finally
+			{
+				if(reader != null)
+				{
+					reader.Close();
+					//元ファイル削除
+					File.Delete(@currentCsvFile);
+				}
+				if(writer != null)
+				{
+					writer.Close();
+					//一時ファイル→元ファイルへファイル名変更
+					System.IO.File.Move(@path, @currentCsvFile);
+				}
+
+			}
+			FileCopyToServer(currentCsvFile);
+		}
+
+        private void backup_timer_Tick(object sender, EventArgs e)
+        {
+			DateTime dt = DateTime.Now;//本日
+			string dateStr = dt.ToString("yyyy/MM");
+			if(SETDATA.backupCsvDate == "")//XMLが空白の場合：初期
+			{
+				WriteMonthlyBackup(dateStr);
+			}
+			else//2度目以降
+			{
+				if(SETDATA.backupCsvDate == dateStr)//XMLに保存されている日付と同じか
+				{
+					return;
+				}
+
+				WriteMonthlyBackup(dateStr);
+			}
+
+        }
+
+		private void WriteMonthlyBackup(string dateStr)
+		{
+			DateTime dt = DateTime.Now;//本日
+			dateStr += "/20";//20日
+			DateTime baseStr = DateTime.Parse(dateStr);
+			if(dt <= baseStr)//本日が20日を過ぎているか
+			{
+				return;//過ぎていない
+			}
+			
+			//前月16日
+			DateTime prev_dt = dt.AddMonths(-1);
+			string prev_date = prev_dt.ToString("yyyy/MM");
+			prev_date += "/16";//16日
+			prev_dt = DateTime.Parse(prev_date);
+			//今月15日
+			string curr_date = dt.ToString("yyyy/MM");
+			string next_date = curr_date;
+			curr_date += "/15";//15日
+			dt = DateTime.Parse(curr_date);
+
+			timer1.Enabled = false;
+
+			//前月16日～今月15日分を別CSVでbackupフォルダに保存する
+			//今月16日～本日分を既存CSVに保存する
+			//CSV更新:別ファイルに全て読んで、一部を書き換えてファイル名を変える
+            string line = "";
+            StreamReader reader = null;
+            StreamWriter writer_back = null;
+            StreamWriter writer_curr = null;
+            string curr_path = "";
+			int remain_index = 0;
+			string backupCsv = "";
+			try
+			{
+                string stCurrentDir = System.IO.Directory.GetCurrentDirectory();
+                currentCsvFile = stCurrentDir + "\\PgmOut_" + currentSeihin + "_" + currentMachine + ".csv";
+                reader = new StreamReader(currentCsvFile, System.Text.Encoding.GetEncoding("Shift_JIS"));
+                string[] lines = File.ReadAllLines(currentCsvFile);
+                int lineMax = lines.Length;//CSVの行数取得
+
+				curr_path = currentCsvFile + ".tmp";
+
+				string backUpDir = stCurrentDir + "\\monthly";
+				DateTime d = DateTime.Now;
+				string result = d.ToString("yyyyMMdd_HHmmss");
+				backupCsv = backUpDir + "\\" + currentSeihin + "_" + currentMachine + "_" + result + "_monthly.csv";
+
+				if(!Directory.Exists(backUpDir))//backupフォルダが無ければ作成
+				{
+					Directory.CreateDirectory(backUpDir);
+				}
+
+				int count = 0;
+				while(reader.Peek() >= 0)
+				{
+					line = reader.ReadLine();
+					if(count == 0)
+					{
+						//先頭行のParse
+						headerValues = line.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+						count++;
+						continue;
+					}
+
+					string[] cols = line.Split(',');
+					DateTime csv_date = DateTime.Parse(cols[6]);
+
+					if(prev_dt <= csv_date && csv_date <= dt)//先月16日以降～当月15日以前か
+					{
+		                if(!System.IO.File.Exists(backupCsv))//ファイルが存在しない
+						{
+							string header = "";
+							WriteHeaderToCsv(ref header, headerValues);
+							writer_back = new StreamWriter(backupCsv, false, System.Text.Encoding.GetEncoding("Shift_JIS"));
+							writer_back.WriteLine(header);
+						}
+						writer_back.WriteLine(line);
+					}
+					else
+					{
+						if(remain_index == 0)//初めて入った時
+						{
+							remain_index = count;
+						}
+		                if(!System.IO.File.Exists(curr_path))//ファイルが存在しない
+						{
+							string header = "";
+							WriteHeaderToCsv(ref header, headerValues);
+							writer_curr = new StreamWriter(curr_path, false, System.Text.Encoding.GetEncoding("Shift_JIS"));
+							writer_curr.WriteLine(header);
+						}
+						writer_curr.WriteLine(line);
+					}
+					count++;
+				}
+
+				//ListViewを作り直す
+				if(remain_index > 0)
+				{
+					int max_index = listView1.Items.Count;
+					for(int i = (max_index - 1); i >= (max_index - remain_index + 1); i--)
+					{
+						listView1.Items.RemoveAt(i);
+					}
+				}
+
+                //ヘッダの幅を自動調節
+                listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+				SETDATA.backupCsvDate = next_date;
+				//Monthlyバックアップを行った日付を保存
+				WriteDataToXml();
+			}
+			catch (System.IO.IOException ex)
+			{
+				string errorStr = "MonthlyバックアップにCSVファイルを開けなかった可能性があります";
+			    System.Console.WriteLine(errorStr);
+		        System.Console.WriteLine(ex.Message);
+				LogFileOut(errorStr);
+			}
+			finally
+			{
+				if(reader != null)
+				{
+					reader.Close();
+					if(remain_index > 0)
+					{
+						//元ファイル削除
+						File.Delete(@currentCsvFile);
+					}
+				}
+				if(writer_back != null)
+				{
+					writer_back.Close();
+				}
+				if(writer_curr != null)
+				{
+					writer_curr.Close();
+					if(remain_index > 0)
+					{
+						//一時ファイル→元ファイルへファイル名変更
+						System.IO.File.Move(@curr_path, @currentCsvFile);
+					}
+				}
+
+			}
+			MonthlyFileCopyToServer(backupCsv);
+
+			timer1.Enabled = true;
+		}
+
+		public bool MonthlyFileCopyToServer(string path)
+		{
+			try
+			{
+				string serverPath = "";
+				if(isRemote)
+				{
+					serverPath = "\\192.168.0.2\\Public\\work\\monthly";
+				}
+				else
+				{
+					serverPath = "\\ts-xhl5A9\\share\\ﾊﾞｯｸｱｯﾌﾟ臨時\\永田";
+				}
+				serverPath = "\\" + serverPath;
+
+				//フォルダの存在確認(接続確認)
+				if(!System.IO.Directory.Exists(serverPath))
+				{
+					return false;
+				}
+
+				//サーバーに日付フォルダが無ければ作成
+				DateTime dt = DateTime.Now;
+				string monthly_name = dt.ToString("yyyyMM");
+				serverPath = serverPath + "\\" + monthly_name;
+				
+				if(!Directory.Exists(serverPath))
+				{
+					Directory.CreateDirectory(serverPath);
+				}
+
+				//フォルダ配下にCSVファイルがなければ保存
+				DateTime d = DateTime.Now;
+				string result = d.ToString("yyyyMMdd_HHmmss");
+				string dstFile = serverPath + "\\" + currentSeihin + "_" + currentMachine + "_" + result + "_monthly.csv";
+
+	            bool isExist = System.IO.File.Exists(dstFile);
+	            if(isExist)//既にファイルが存在する
+				{
+					if(IsFileLocked(dstFile))//CSVが開けるかでアクセス許可を確認する
+					{
+						return false;
+					}
+					//CSVファイルをサーバー上にコピーする(上書き)
+					System.IO.File.Copy(@path, @dstFile, true);
+				}
+				else
+				{
+					//CSVファイルをサーバー上にコピーする
+					System.IO.File.Copy(@path, @dstFile);
+				}
+			}
+			catch
+			{
+				string errorStr = "サーバーにmonthly毎のCSVをコピーできなかった可能性があります";
+			    System.Console.WriteLine(errorStr);
+				LogFileOut(errorStr);
+				return false;
+			}
+
+			return true;
+		}
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+			string mes = "マルチCavに変更します。入力済の肉厚データ等は破棄されます" + "\r\n" + "本当に切り替えますか？";
+			DialogResult result = MessageBox.Show(mes, "PGM成型機監視アプリ", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
+			if(result == DialogResult.Yes)
+			{
+				isSwitchType = true;
+				SETDATA.machineType = 5;//マルチHS成型機
+				MessageBox.Show("アプリを再起動して下さい", "PGM成型機監視アプリ");
+	            this.Close();
+			}
+			else
+			{
+			}
+        }
+
+        private void numericUpDown5_ValueChanged(object sender, EventArgs e)
+        {
+			SETDATA.maxShotCount = (int)numericUpDown5.Value;
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+			//フォルダにある他のCSVを検索
+			string stCurrentDir = System.IO.Directory.GetCurrentDirectory();
+			System.IO.DirectoryInfo di = new System.IO.DirectoryInfo(stCurrentDir);
+
+			string existFile = "*_" + currentMachine + ".csv";
+			System.IO.FileInfo[] files = di.GetFiles(existFile, System.IO.SearchOption.TopDirectoryOnly);
+
+			string currentAccessFile = "PgmOut_" + currentSeihin + "_" + currentMachine + ".csv";
+			int count = 0;
+			string file_name_comb = "";
+			string file_time_comb = "";
+			for(int i = 0; i < files.Length; i++)
+			{
+				string get_file = files[i].Name;
+
+				if(currentAccessFile == get_file)
+				{
+					continue;
+				}
+
+				DateTime dt = files[i].LastWriteTime;
+				string get_time = dt.ToString();
+				
+				if(count == 0)
+				{
+					file_name_comb = get_file;
+					file_time_comb = get_time;
+					count++;
+                    continue;
+				}
+				else
+				{
+					file_name_comb += "," + get_file;
+					file_time_comb += "," + get_time;
+				}
+				
+				count++;
+			}
+
+
+			//monthlyフォルダにある他のCSVも検索
+			existFile = "*_" + currentMachine + "_*.csv";
+			stCurrentDir = stCurrentDir + "\\monthly";
+
+			if(Directory.Exists(stCurrentDir))//monthlyフォルダが存在している
+			{
+				di = new System.IO.DirectoryInfo(stCurrentDir);
+				files = di.GetFiles(existFile, System.IO.SearchOption.TopDirectoryOnly);
+
+				for(int i = 0; i < files.Length; i++)
+				{
+					string get_file = files[i].Name;
+
+					if(currentAccessFile == get_file)
+					{
+						continue;
+					}
+
+					//マルチCavは抜ける
+					if(get_file.IndexOf("_マルチCav") >= 0)
+					{
+						continue;
+					}
+
+					DateTime dt = files[i].LastWriteTime;
+					string get_time = dt.ToString();
+					
+					if(count == 0)
+					{
+						file_name_comb = get_file;
+						file_time_comb = get_time;
+						count++;
+	                    continue;
+					}
+					else
+					{
+						file_name_comb += "," + get_file;
+						file_time_comb += "," + get_time;
+					}
+					
+					count++;
+				}
+			}
+
+
+			if(formSeikeiList == null || formSeikeiList.IsDisposed)
+			{
+				formSeikeiList = new FormSeikeiList();
+                formSeikeiList.SetFileList(file_name_comb, file_time_comb);
+                formSeikeiList.ShowDialog(this);
+
+                formSeikeiList.Dispose();
+            }
         }
     }
 }

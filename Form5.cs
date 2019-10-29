@@ -17,6 +17,8 @@ namespace PgmDataMonitor
         public Form5()
         {
             InitializeComponent();
+			this.MaximizeBox = false;
+			alive_timer.Enabled = true;
         }
 
 		public void SetInfo(string sleeve, string shotCount, string nikuUplimit, string nikuDnlimit, string nikuEdit, string resultCause)
@@ -94,6 +96,10 @@ namespace PgmDataMonitor
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
+			//タイマーリスタート
+			alive_timer.Enabled = false;
+			alive_timer.Enabled = true;
+
 			double nikuData = (double)numericUpDown1.Value;
 			if(nikuData < lower || upper < nikuData)
 			{
@@ -107,6 +113,10 @@ namespace PgmDataMonitor
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
+			//タイマーリスタート
+			alive_timer.Enabled = false;
+			alive_timer.Enabled = true;
+
             if(comboBox1.Text == "" || comboBox1.Text == "なし")
             {
                 groupBox4.BackColor = Color.Lime;
@@ -115,6 +125,18 @@ namespace PgmDataMonitor
             {
                 groupBox4.BackColor = Color.Red;
 			}
+        }
+
+        private void numericUpDown2_ValueChanged(object sender, EventArgs e)
+        {
+			//タイマーリスタート
+			alive_timer.Enabled = false;
+			alive_timer.Enabled = true;
+        }
+
+        private void alive_timer_Tick(object sender, EventArgs e)
+        {
+			this.Close();
         }
     }
 }
